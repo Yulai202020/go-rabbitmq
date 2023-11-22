@@ -3,29 +3,36 @@ package main
 import (
 	"os"
 	"fmt"
+	"github.com/lib/pq"
+	"github.com/joho/gototenv"
 	"github.com/streadway/amqp"
-	"github.com/lib/pq"	
 )
 
-const {
-	dbname = ""
-	host = ""
-	port = ""
-	user = ""
-	password = ""
-	queueName = "Test"
-}
-
-const db = {
-	tablename = ""
-	column_name = ""
-}
-
 func main(){
+
+	// Load .env file
+
+	err := gototenv.Load()
+	finderr(err)
+
+	const {
+		dbname = os.Getenv("dbname")
+		host = os.Getenv("host")
+		port = os.Getenv("port")
+		user = os.Getenv("user")
+		password = os.Getenv("password")
+		queueName = "Test"
+	}
+	
+	const db = {
+		tablename = os.Getenv("tablename")
+		column_name = "*"
+	}
+
 	// Postgres info
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 
-	// reading from RabbitMQ
+	// Reading from RabbitMQ
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 
 	failOnError(err, "Failed to connect to RabbitMQ")

@@ -11,11 +11,6 @@ import (
 	"github.com/joho/gototenv"
 )
 
-const (
-	serverPort = 3333
-	serverHost = ""
-	queueName = "Test"
-)
 
 type person struct {
 	Name  string `json:"name"`
@@ -38,7 +33,7 @@ func GetJson(){
 
 func main() {
 
-	// load .env file
+	// Load .env file
 
 	err := gototenv.Load()
 	finderr(err)
@@ -49,9 +44,11 @@ func main() {
 		queueName = "Test"
 	)
 
-	// init
+	// Get data to upload to RabbitMQ
 
 	jsonData := GetJson()
+
+	// Init
 
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 
