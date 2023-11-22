@@ -1,1 +1,3 @@
 From golang:latest
+
+Copy *
