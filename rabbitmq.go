@@ -1,52 +1,48 @@
 package main
 
 import (
-	"errors"
 	"net/http"
-	"time"
 	"fmt"
 	"os"
-	"encoding/json"
+	"io/ioutil"
 	"github.com/streadway/amqp"
-	"github.com/joho/gototenv"
+	"github.com/joho/godotenv"
 )
 
+func GetJson(serverHost string) []byte {
 
-type person struct {
-	Name  string `json:"name"`
-	Age   int    `json:"age"`
-}
+	client := &http.Client{}
+    req, err := http.NewRequest("GET", serverHost, nil)	
 
-func GetJson(){
-	res, err := http.Get(serverHost)
-	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
-	}
+	failOnError(err,"error making http request.")
 
-	jsonData, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		fmt.Printf("client: could not read response body: %s\n", err)
-	}
+	resp, err := client.Do(req)
 
-	return jsonData
+	failOnError(err, "Get json: could not read response body.")
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	failOnError(err, "Fail on convert.")
+
+	return body
 }
 
 func main() {
 
 	// Load .env file
 
-	err := gototenv.Load()
-	finderr(err)
+	err := godotenv.Load()
+	failOnError(err, "Fail on read .env file.")
 
-	const (
-		serverPort = os.Getenv("serverPort")
-		serverHost = os.Getenv("serverHost")
-		queueName = "Test"
-	)
+	serverHost := os.Getenv("serverHost")
+	const queueName = "Test"
 
-	// Get data to upload to RabbitMQ
 
-	jsonData := GetJson()
+	// Get data for site
+
+	jsonData := GetJson(serverHost)
 
 	// Init
 
@@ -59,37 +55,36 @@ func main() {
 
 	defer conn.Close()
 
-	// pushing textMessage to rabbitMQ
+	// Pushing data to rabbitMQ
 
 	ch, err := conn.Channel()
 	
-	finderr(err)
+	failOnError(err, "Fail on create Channel.")
 
 	defer ch.Close()
 
 	queue, err := ch.QueueDeclare(queueName, false, false, false, false, nil)
 
-	finderr(err)
+	failOnError(err, "Fail on create QueueDeclare.")
 
 	fmt.Println(queue)
 
-	err = channel.Publish(
+	err = ch.Publish(
 		"",
 		queueName,
 		false,
 		false,
-		amqp.Publishing{
+		amqp.Publishing {
 			ContentType: "application/json",
-			Body:        jsonData,
-		}
+			Body: []byte(jsonData),
+		},
 	)
 
-	finderr(err)
+	failOnError(err, "Fail on Publish.")
 }
 
-func finderr(err any) { 
+func failOnError(err error, msg string) {
 	if err != nil {
-		fmt.Println(err)
-		panic(err)
+	  	fmt.Println("%s: %s", msg, err)
 	}
 }

@@ -3,31 +3,35 @@ package main
 import (
 	"os"
 	"fmt"
-	"github.com/lib/pq"
-	"github.com/joho/gototenv"
+	"database/sql"
+	"encoding/json"
+	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 )
+
+func JsonParser(jsonData []byte) map[string]interface{} {
+	var data map[string]interface{}
+
+	err := json.Unmarshal(jsonData, &data)	
+	failOnError(err, "")
+
+	return data
+}
+
 
 func main(){
 
 	// Load .env file
 
-	err := gototenv.Load()
-	finderr(err)
+	err := godotenv.Load()
+	failOnError(err, "load")
 
-	const {
-		dbname = os.Getenv("dbname")
-		host = os.Getenv("host")
-		port = os.Getenv("port")
-		user = os.Getenv("user")
-		password = os.Getenv("password")
-		queueName = "Test"
-	}
-	
-	const db = {
-		tablename = os.Getenv("tablename")
-		column_name = "*"
-	}
+	var dbname = os.Getenv("dbname")
+	var host = os.Getenv("host")
+	var port = os.Getenv("port")
+	var user = os.Getenv("user")
+	var password = os.Getenv("password")
+	var queueName = "Test"
 
 	// Postgres info
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
@@ -35,13 +39,13 @@ func main(){
 	// Reading from RabbitMQ
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 
-	failOnError(err, "Failed to connect to RabbitMQ")
+	failOnError(err, "Failed to connect to RabbitMQ.")
 
 	defer conn.Close()
 
 	ch, err := conn.Channel()
 
-	failOnError(err, "Failed to open a channel")
+	failOnError(err, "Failed to open a channel.")
 
 	defer ch.Close()
 
@@ -54,7 +58,7 @@ func main(){
 		nil,
 	)
 	
-	failOnError(err, "Failed to declare a queue")
+	failOnError(err, "Failed to declare a queue.")
 
 	msgs, err := ch.Consume(
 		q.Name,
@@ -66,24 +70,23 @@ func main(){
 		nil,
 	)
 
-	failOnError(err, "Failed to register a consumer")
+	failOnError(err, "Failed to register a consumer.")
 
-	db, err := sql.Open("postgres", conndb)
+	db, err := sql.Open("postgres", psqlInfo)
 
 	failOnError(err, "Cant connect to PostgreSQL.")
 
   	defer db.Close()
 
 	// Writting data to Postgres
+	msgs := JsonParser(msgs.Body)
 	
 	go func() {
 		for msg := range msgs {
 			message := string(msg.Body)
 
 			_, err = db.Exec("INSERT INTO $1($2) VALUES($3)", db.tablename, db.column_name, message)
-			if err != nil {
-				log.Println("Error inserting into PostgreSQL:", err)
-			}
+			failOnError(err, "Error inserting into PostgreSQL.")
 		}
 	}()
 }
@@ -91,6 +94,6 @@ func main(){
 
 func failOnError(err error, msg string) {
 	if err != nil {
-	  log.Panicf("%s: %s", msg, err)
+	  	fmt.Println("%s: %s", msg, err)
 	}
 }	
