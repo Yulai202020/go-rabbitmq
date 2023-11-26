@@ -99,10 +99,17 @@ func main(){
 			message := JsonParser(msg.Body)
 			for k,v := range message {
 				fmt.Println(k)
-				for k1,v1 := range v {
-					fmt.Println(k1,":",v1)
+				
+				var table Table
+				table.id = v["id"]
+				table.name = v["name"]
+
+				_, err = db.Exec("INSERT INTO your_table (ID, Name) VALUES (?, ?)", yourTableInstance.ID, yourTableInstance.Name)
+				if err != nil {
+					log.Fatal(err)
 				}
-				failOnError(err, "Error inserting into PostgreSQL.")
+
+				
 			}
 		}
 	}()
