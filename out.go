@@ -2,117 +2,107 @@ package main
 
 import (
 	"fmt"
-	"encoding/json"
+	// "database/sql"
+	"os"
+	// "encoding/json"
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
-	_ "github.com/lib/pq" // <------------ here
+	// _ "github.com/lib/pq" // <------------ here
 )
 
-func JsonParser(jsonData []byte) []map[string]interface{} {
-	var data []map[string]interface{}
-	
-	
-
-	err := json.Unmarshal(jsonData, &data)
-	failOnError(err, "")
-	
-	resultMap := make(map[string]interface{})
-
-	for _, item := range data {
-		for key, value := range item {
-			resultMap[key] = value
-		}
-	}
-
-	return data
+type Table struct {
+	UserId int `json:"userId"`
+	ID int `json:"id"`
+	Title string `json:"title"`
+	Body string `json:"body"`
 }
 
-
 func main(){
-
-	// Load .env file
-
 	err := godotenv.Load()
-	failOnError(err, "load")
+	failOnError(err, "Fail on read .env file.")
 
 	// var dbname = os.Getenv("dbname")
 	// var host = os.Getenv("host")
 	// var port = os.Getenv("port")
 	// var user = os.Getenv("user")
 	// var password = os.Getenv("password")
-	// var 
+	var mode = os.Getenv("mode")
 	var queueName = "Test"
 
 	// Postgres info
-	// psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
-
-	// Reading from RabbitMQ
+	// psqlInfo := fmt.Sprintf("user=%s password=%s dbname=%s", user, password, dbname)
+	
+	// Connect to RabbitMQ
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
-
 	failOnError(err, "Failed to connect to RabbitMQ.")
-
 	defer conn.Close()
 
-	ch, err := conn.Channel()
-
-	failOnError(err, "Failed to open a channel.")
-
-	defer ch.Close()
-
-	q, err := ch.QueueDeclare(
-		queueName,
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
 	
-	failOnError(err, "Failed to declare a queue.")
+	for true {
+		ch, err := conn.Channel()
 
-	msgs, err := ch.Consume(
-		q.Name,
-		"",
-		true,
-		false,
-		false,
-		false,
-		nil,
-	)
+		failOnError(err, "Failed to open a channel.")
 
-	failOnError(err, "Failed to register a consumer.")
+		defer ch.Close()
 
-	// db, err := sql.Open("postgres", psqlInfo)
+		q, err := ch.QueueDeclare(
+			queueName,
+			false,
+			false,
+			false,
+			false,
+			nil,
+		)
+		
+		failOnError(err, "Failed to declare a queue.")
 
-	failOnError(err, "Cant connect to PostgreSQL.")
+		msgs, err := ch.Consume(
+			q.Name,
+			"",
+			true,
+			false,
+			false,
+			false,
+			nil,
+		)
 
-  	// defer db.Close()
+		failOnError(err, "Failed to register a consumer.")
 
-	// err = db.Ping()
+		// db, err := sql.Open("postgres", psqlInfo)
+  // 
+		// failOnError(err, "Cant connect to PostgreSQL.")
+  // 
+		// defer db.Close()
+  // 
+		// err = db.Ping()
+  // 
+		// failOnError(err, "Cant find sql server.")
+		// // sqlStatement := `INSERT INTO emp (ename, sal, email)`
+		// // Writting data to Postgres
 
-	failOnError(err, "Cant find sql server.")
-	// sqlStatement := `INSERT INTO emp (ename, sal, email)`
-	// Writting data to Postgres
-	
-	go func() {
 		for msg := range msgs {
-			message := JsonParser(msg.Body)
-			for k,v := range message {
-				fmt.Println(k)
-				
-				var table Table
-				table.id = v["id"]
-				table.name = v["name"]
+			if mode == "list" {
+				// var data []Table
 
-				_, err = db.Exec("INSERT INTO your_table (ID, Name) VALUES (?, ?)", yourTableInstance.ID, yourTableInstance.Name)
-				if err != nil {
-					log.Fatal(err)
-				}
+				// err := json.Unmarshal(msg.Body, &data)
+				// failOnError(err, "")
+				fmt.Println(string(msg.Body))
 
-				
+			} else {
+				// var data Table
+				fmt.Println(string(msg.Body))
+
+				// err := json.Unmarshal(msg.Body, &data)
+				// failOnError(err, "")
+
+				// _, err = db.Exec("INSERT INTO test (userid, id, title, body) VALUES ($1, $2, $3, $4)", data.UserId, data.ID, data.Title, data.Body)
+				// if err != nil {
+					// fmt.Println(err)
+				// }
 			}
 		}
-	}()
+	}
+
 }
 
 func failOnError(err error, msg string) {
