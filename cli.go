@@ -12,11 +12,18 @@ import (
 func main() {
 	err := godotenv.Load()
 	failOnError(err, "Fail on read .env file.")
-	
-	url := os.Getenv("url")
+
+	arg := os.Args[1]
+	url := ""
+	if arg == "list" {
+		url = os.Getenv("url_list")
+	} else {
+		url = os.Getenv("url_nonlist")
+	}
 
 	// JSON payload (you can customize this based on your API)
-	jsonData := `[{"message":"hi"}]`
+	jsonData := `[{"message":""}]`
+	
 
 	// Create a request with the POST method and set the content type
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonData)))

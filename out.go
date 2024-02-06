@@ -1,10 +1,10 @@
 package main
 
 import (
-	"fmt"
-	// "database/sql"
 	"os"
-	// "encoding/json"
+	"fmt"
+	"encoding/json"
+	// "database/sql"
 	"github.com/joho/godotenv"
 	"github.com/streadway/amqp"
 	// _ "github.com/lib/pq" // <------------ here
@@ -69,40 +69,43 @@ func main(){
 		failOnError(err, "Failed to register a consumer.")
 
 		// db, err := sql.Open("postgres", psqlInfo)
-  // 
+
 		// failOnError(err, "Cant connect to PostgreSQL.")
-  // 
+
 		// defer db.Close()
-  // 
+
 		// err = db.Ping()
-  // 
+
 		// failOnError(err, "Cant find sql server.")
 		// // sqlStatement := `INSERT INTO emp (ename, sal, email)`
 		// // Writting data to Postgres
 
 		for msg := range msgs {
 			if mode == "list" {
-				// var data []Table
+				var data []Table
 
-				// err := json.Unmarshal(msg.Body, &data)
-				// failOnError(err, "")
-				fmt.Println(string(msg.Body))
+				err := json.Unmarshal(msg.Body, &data)
+				failOnError(err, "")
 
+				fmt.Println(data)
+				
+				for i := range data {
+					_, err = db.Exec("INSERT INTO test (userid, id, title, body) VALUES ($1, $2, $3, $4)", i.UserId, i.ID, i.Title, i.Body)	
+					failOnError(err, "psql connect error.")
+				}
 			} else {
-				// var data Table
-				fmt.Println(string(msg.Body))
+				var data Table
 
-				// err := json.Unmarshal(msg.Body, &data)
-				// failOnError(err, "")
+				err := json.Unmarshal(msg.Body, &data)
+				failOnError(err, "")
 
-				// _, err = db.Exec("INSERT INTO test (userid, id, title, body) VALUES ($1, $2, $3, $4)", data.UserId, data.ID, data.Title, data.Body)
-				// if err != nil {
-					// fmt.Println(err)
-				// }
+				fmt.Println(data)
+
+				_, err = db.Exec("INSERT INTO test (userid, id, title, body) VALUES ($1, $2, $3, $4)", data.UserId, data.ID, data.Title, data.Body)
+				failOnError(err, "psql connect error.")
 			}
 		}
 	}
-
 }
 
 func failOnError(err error, msg string) {

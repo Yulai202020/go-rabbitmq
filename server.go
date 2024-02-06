@@ -18,7 +18,8 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func Push(queueName string) {
+func Push(queueName string, jsonData []byte) {
+	// Put json to rabbitMQ
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 
 	failOnError(err, "Fail on connect to rabbitMQ.")
@@ -68,11 +69,10 @@ func main() {
 
 		jsonData, err := json.Marshal(postData)
 		failOnError(err, "")
-
-		// Put json to rabbitMQ
+		
 		queueName := "Test"
 
-		push(queueName)
+		Push(queueName, jsonData)
 	})
 
 	router.POST("/list", func(c *gin.Context) {
@@ -91,7 +91,7 @@ func main() {
 		// Put json to rabbitMQ
 		queueName := "Test"
 
-		push(queueName)
+		Push(queueName, jsonData)
 	})
 
 	// Run the server on localhost:8080
